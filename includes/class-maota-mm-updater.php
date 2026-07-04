@@ -70,9 +70,23 @@ class Maota_MM_Updater {
 			return null;
 		}
 
+		// Prefer a hand-attached .zip asset (correctly structured as
+		// maota-metamarkup/...) so auto-updates and manual installs use the
+		// identical artifact; fall back to GitHub's source zipball.
+		$package = $body->zipball_url;
+		if ( ! empty( $body->assets ) && is_array( $body->assets ) ) {
+			foreach ( $body->assets as $asset ) {
+				if ( ! empty( $asset->browser_download_url ) && ! empty( $asset->name )
+					&& '.zip' === strtolower( substr( $asset->name, -4 ) ) ) {
+					$package = $asset->browser_download_url;
+					break;
+				}
+			}
+		}
+
 		$release = (object) array(
 			'version'   => ltrim( $body->tag_name, 'vV' ),
-			'package'   => $body->zipball_url,
+			'package'   => $package,
 			'changelog' => isset( $body->body ) ? (string) $body->body : '',
 			'html_url'  => isset( $body->html_url ) ? $body->html_url : '',
 		);

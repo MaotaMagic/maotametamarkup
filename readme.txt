@@ -22,5 +22,8 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.0.1 =
+* Self-updater now prefers a packaged .zip release asset over the source zipball, so manual installs and automatic updates use the identical artifact.
+
 = 1.0.0 =
 * Initial release: meta tags, Open Graph, Twitter Card, JSON-LD Organization/WebSite schema, and virtual llms.txt.
