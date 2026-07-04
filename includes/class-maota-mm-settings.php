@@ -270,11 +270,22 @@ class Maota_MM_Settings {
 	 * we're on a secondary (non-default) language.
 	 */
 	private function editing_language() {
-		$lang = Maota_MM_I18n::current_language();
-		if ( ! $lang && isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display routing only.
+		$default = Maota_MM_I18n::default_language();
+
+		// In wp-admin, WPML's admin-bar language switch puts the chosen
+		// language in the ?lang= query arg. Prefer it: wpml_current_language
+		// does not reliably reflect the admin-bar switch inside wp-admin.
+		$lang = '';
+		if ( isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only display routing.
 			$lang = sanitize_key( wp_unslash( $_GET['lang'] ) );
 		}
-		$default   = Maota_MM_I18n::default_language();
+		if ( '' === $lang ) {
+			$lang = Maota_MM_I18n::current_language();
+		}
+		if ( ! $lang ) {
+			$lang = $default;
+		}
+
 		$secondary = ( Maota_MM_I18n::is_active() && $lang && $default && $lang !== $default );
 
 		return array(
@@ -419,7 +430,7 @@ class Maota_MM_Settings {
 		if ( ! $ctx['lang'] ) {
 			return;
 		}
-		$label = '<strong>' . esc_html( $this->language_label( $ctx['lang'] ) ) . '</strong>';
+		$label = '<strong>' . esc_html( $this->language_label( $ctx['lang'] ) . ' (' . $ctx['lang'] . ')' ) . '</strong>';
 
 		echo '<div class="notice notice-info inline"><p>';
 		if ( $ctx['secondary'] ) {
