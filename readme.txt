@@ -22,6 +22,9 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.2.2 =
+* llms.txt is now language-aware: request /llms.txt?lang=xx to get a specific language (works in any WPML URL mode), and the Languages section links to those working URLs. The "what this site provides" summary now appears in the blockquote (previously the organization description was shown twice).
+
 = 1.2.1 =
 * Fix: the settings page now correctly follows the WPML admin-bar language selector (reads the ?lang= admin URL parameter), so each language's content fields are edited and saved separately. The editing-language notice now shows the language code.
 

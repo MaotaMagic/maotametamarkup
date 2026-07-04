@@ -4,7 +4,7 @@
  * Plugin URI:        https://maota.no/plugins/maota-metamarkup
  * Update URI:        https://github.com/MaotaMagic/maotametamarkup
  * Description:       Maps site identity and organization context into meta tags, Open Graph tags, JSON-LD structured data, and a virtual llms.txt so search engines and AI agents understand who you are and what your site provides.
- * Version:           1.2.1
+ * Version:           1.2.2
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            Maota
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MAOTA_METAMARKUP_VERSION', '1.2.1' );
+define( 'MAOTA_METAMARKUP_VERSION', '1.2.2' );
 define( 'MAOTA_METAMARKUP_FILE', __FILE__ );
 define( 'MAOTA_METAMARKUP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MAOTA_METAMARKUP_URL', plugin_dir_url( __FILE__ ) );

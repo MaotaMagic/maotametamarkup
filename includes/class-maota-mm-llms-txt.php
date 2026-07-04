@@ -34,11 +34,29 @@ class Maota_MM_LLMs_Txt {
 			return;
 		}
 
+		$this->maybe_switch_language();
+
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		header( 'X-Robots-Tag: noindex' );
 
 		echo $this->build_content();
 		exit;
+	}
+
+	/**
+	 * Allow /llms.txt?lang=xx to serve a specific language. WPML's directory
+	 * and parameter URL modes don't reach this virtual endpoint, so we switch
+	 * the active language ourselves from an explicit ?lang= language code.
+	 */
+	private function maybe_switch_language() {
+		if ( ! Maota_MM_I18n::is_active() || ! isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- public read-only endpoint.
+			return;
+		}
+		$lang   = sanitize_key( wp_unslash( $_GET['lang'] ) );
+		$active = Maota_MM_I18n::active_languages();
+		if ( '' !== $lang && isset( $active[ $lang ] ) ) {
+			do_action( 'wpml_switch_language', $lang );
+		}
 	}
 
 	private function clean_text( $text ) {
@@ -52,15 +70,24 @@ class Maota_MM_LLMs_Txt {
 		$lines[] = '# ' . $data->get_site_title();
 		$lines[] = '';
 
-		$summary = $data->get_effective_org_description();
+		// Blockquote: the short "what this site provides" pitch — prefer the
+		// context summary, then the org description, then the tagline.
+		$summary = $data->get_translated_field( 'context', 'context_summary' );
+		if ( '' === trim( (string) $summary ) ) {
+			$summary = $data->get_translated_field( 'organization', 'org_description' );
+		}
+		if ( '' === trim( (string) $summary ) ) {
+			$summary = $data->get_tagline();
+		}
 		if ( $summary ) {
 			$lines[] = '> ' . $this->clean_text( $summary );
 			$lines[] = '';
 		}
 
+		// Fuller organization description as a paragraph, when it adds something
+		// beyond the blockquote.
 		$org_description = $data->get_translated_field( 'organization', 'org_description' );
-		$context_summary  = $data->get_translated_field( 'context', 'context_summary' );
-		if ( $org_description && $context_summary && $org_description !== $context_summary ) {
+		if ( $org_description && trim( (string) $org_description ) !== trim( (string) $summary ) ) {
 			$lines[] = $this->clean_text( $org_description );
 			$lines[] = '';
 		}
@@ -108,7 +135,10 @@ class Maota_MM_LLMs_Txt {
 			$lines[] = 'This site is available in multiple languages. Language-specific versions of this file:';
 			foreach ( $languages as $code => $lang ) {
 				$label = ! empty( $lang['native_name'] ) ? $lang['native_name'] : $code;
-				$url   = Maota_MM_I18n::localized_url( $data->get_home_url() . 'llms.txt', $code );
+				// Use an explicit ?lang= code, which this endpoint resolves in
+				// any WPML URL mode (the language directory prefix does not
+				// reach this virtual file).
+				$url   = add_query_arg( 'lang', $code, $data->get_home_url() . 'llms.txt' );
 				$lines[] = '- ' . $this->clean_text( $label ) . ': ' . $url;
 			}
 			$lines[] = '';
