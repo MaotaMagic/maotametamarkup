@@ -47,6 +47,25 @@ class Maota_MM_Meta_Output {
 		if ( $page['image'] ) {
 			printf( '<meta property="og:image" content="%s" />' . "\n", esc_url( $page['image'] ) );
 		}
+
+		$this->render_locales();
+	}
+
+	/**
+	 * og:locale for the current language (localized site locale, e.g. nb_NO),
+	 * plus og:locale:alternate for every other active language. On a
+	 * single-language site only og:locale is printed.
+	 */
+	private function render_locales() {
+		printf( '<meta property="og:locale" content="%s" />' . "\n", esc_attr( get_locale() ) );
+
+		$current = Maota_MM_I18n::current_language();
+		foreach ( Maota_MM_I18n::active_languages() as $code => $lang ) {
+			if ( $code === $current || empty( $lang['default_locale'] ) ) {
+				continue;
+			}
+			printf( '<meta property="og:locale:alternate" content="%s" />' . "\n", esc_attr( $lang['default_locale'] ) );
+		}
 	}
 
 	private function render_twitter_card( $page ) {

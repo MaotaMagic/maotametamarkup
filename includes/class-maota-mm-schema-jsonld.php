@@ -148,7 +148,7 @@ class Maota_MM_Schema_JsonLD {
 
 	private function build_website_node() {
 		$data        = Maota_MM_Data::instance();
-		$description = $data->get_field( 'context', 'context_summary' ) ?: $data->get_tagline();
+		$description = $data->get_translated_field( 'context', 'context_summary' ) ?: $data->get_tagline();
 
 		$node = array(
 			'@type'     => 'WebSite',

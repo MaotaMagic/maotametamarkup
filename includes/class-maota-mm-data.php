@@ -51,8 +51,17 @@ class Maota_MM_Data {
 		return isset( $options[ $section ][ $key ] ) ? $options[ $section ][ $key ] : '';
 	}
 
-	private function get_lines( $section, $key ) {
-		$raw = $this->get_field( $section, $key );
+	/**
+	 * Same as get_field() but resolved to the current language via WPML when
+	 * active. Used by all OUTPUT paths; the admin form still uses get_field()
+	 * so it edits the original/default-language value.
+	 */
+	public function get_translated_field( $section, $key ) {
+		return Maota_MM_I18n::translate( $key, $this->get_field( $section, $key ) );
+	}
+
+	private function get_lines( $section, $key, $translate = false ) {
+		$raw = $translate ? $this->get_translated_field( $section, $key ) : $this->get_field( $section, $key );
 		if ( '' === trim( (string) $raw ) ) {
 			return array();
 		}
@@ -65,11 +74,11 @@ class Maota_MM_Data {
 	}
 
 	public function get_offerings() {
-		return $this->get_lines( 'context', 'context_offerings' );
+		return $this->get_lines( 'context', 'context_offerings', true );
 	}
 
 	public function get_knows_about() {
-		return $this->get_lines( 'context', 'context_knows_about' );
+		return $this->get_lines( 'context', 'context_knows_about', true );
 	}
 
 	/* --- Core WP Site Identity (read live, never duplicated into options) --- */
@@ -123,11 +132,11 @@ class Maota_MM_Data {
 	}
 
 	public function get_effective_org_description() {
-		$description = $this->get_field( 'organization', 'org_description' );
+		$description = $this->get_translated_field( 'organization', 'org_description' );
 		if ( '' !== $description ) {
 			return $description;
 		}
-		$summary = $this->get_field( 'context', 'context_summary' );
+		$summary = $this->get_translated_field( 'context', 'context_summary' );
 		if ( '' !== $summary ) {
 			return $summary;
 		}

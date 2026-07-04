@@ -58,8 +58,8 @@ class Maota_MM_LLMs_Txt {
 			$lines[] = '';
 		}
 
-		$org_description = $data->get_field( 'organization', 'org_description' );
-		$context_summary  = $data->get_field( 'context', 'context_summary' );
+		$org_description = $data->get_translated_field( 'organization', 'org_description' );
+		$context_summary  = $data->get_translated_field( 'context', 'context_summary' );
 		if ( $org_description && $context_summary && $org_description !== $context_summary ) {
 			$lines[] = $this->clean_text( $org_description );
 			$lines[] = '';
@@ -95,10 +95,22 @@ class Maota_MM_LLMs_Txt {
 			$lines[] = '';
 		}
 
-		$additional = $data->get_field( 'context', 'context_additional_ai' );
+		$additional = $data->get_translated_field( 'context', 'context_additional_ai' );
 		if ( $additional ) {
 			$lines[] = '## Additional Context';
 			$lines[] = $this->clean_text( $additional );
+			$lines[] = '';
+		}
+
+		$languages = Maota_MM_I18n::active_languages();
+		if ( count( $languages ) > 1 ) {
+			$lines[] = '## Languages';
+			$lines[] = 'This site is available in multiple languages. Language-specific versions of this file:';
+			foreach ( $languages as $code => $lang ) {
+				$label = ! empty( $lang['native_name'] ) ? $lang['native_name'] : $code;
+				$url   = Maota_MM_I18n::localized_url( $data->get_home_url() . 'llms.txt', $code );
+				$lines[] = '- ' . $this->clean_text( $label ) . ': ' . $url;
+			}
 			$lines[] = '';
 		}
 

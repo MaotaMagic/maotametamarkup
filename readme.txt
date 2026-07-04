@@ -22,6 +22,9 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.1.0 =
+* Multilingual output via WPML. Global text fields (description, summary, offerings, topics, AI notes) become translatable in WPML > String Translation, and meta tags, JSON-LD, and llms.txt output in the current language. Adds og:locale + og:locale:alternate, and a language-versions list in llms.txt. No effect on single-language sites.
+
 = 1.0.1 =
 * Self-updater now prefers a packaged .zip release asset over the source zipball, so manual installs and automatic updates use the identical artifact.
 
