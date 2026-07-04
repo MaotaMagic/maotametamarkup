@@ -1,0 +1,12 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+.cursor/
+
+# Node / Composer (future build tooling)
+node_modules/
+vendor/
