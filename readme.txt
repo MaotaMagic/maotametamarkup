@@ -22,6 +22,9 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.2.0 =
+* Translations are now edited directly on the settings page: switch language with the WPML admin-bar selector and enter language-specific content (description, summary, offerings, topics, AI notes). Values are stored per language in the plugin and output in the matching language. Replaces the 1.1.0 String Translation approach. No effect on single-language sites.
+
 = 1.1.0 =
 * Multilingual output via WPML. Global text fields (description, summary, offerings, topics, AI notes) become translatable in WPML > String Translation, and meta tags, JSON-LD, and llms.txt output in the current language. Adds og:locale + og:locale:alternate, and a language-versions list in llms.txt. No effect on single-language sites.
 

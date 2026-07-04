@@ -264,14 +264,54 @@ class Maota_MM_Settings {
 		}
 	}
 
+	/**
+	 * Which language the settings page is currently editing, driven by the
+	 * WPML admin-bar language switch. Returns lang/default codes and whether
+	 * we're on a secondary (non-default) language.
+	 */
+	private function editing_language() {
+		$lang = Maota_MM_I18n::current_language();
+		if ( ! $lang && isset( $_GET['lang'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display routing only.
+			$lang = sanitize_key( wp_unslash( $_GET['lang'] ) );
+		}
+		$default   = Maota_MM_I18n::default_language();
+		$secondary = ( Maota_MM_I18n::is_active() && $lang && $default && $lang !== $default );
+
+		return array(
+			'lang'      => $lang,
+			'default'   => $default,
+			'secondary' => $secondary,
+		);
+	}
+
+	/** Human-readable name for a language code (falls back to the code). */
+	private function language_label( $code ) {
+		$langs = Maota_MM_I18n::active_languages();
+		return isset( $langs[ $code ]['native_name'] ) ? $langs[ $code ]['native_name'] : $code;
+	}
+
 	public function render_field( $args ) {
-		$section     = $args['section'];
-		$key         = $args['key'];
-		$field       = $args['field'];
-		$value       = Maota_MM_Data::instance()->get_field( $section, $key );
-		$name        = self::OPTION_NAME . "[{$section}][{$key}]";
-		$id          = "maota_mm_{$section}_{$key}";
-		$placeholder = isset( $field['placeholder'] ) ? $field['placeholder'] : '';
+		$section = $args['section'];
+		$key     = $args['key'];
+		$field   = $args['field'];
+		$data    = Maota_MM_Data::instance();
+		$ctx     = $this->editing_language();
+
+		$translating = ( $ctx['secondary'] && Maota_MM_I18n::is_translatable( $key ) );
+
+		if ( $translating ) {
+			$lang        = $ctx['lang'];
+			$name        = self::OPTION_NAME . "[i18n][{$lang}][{$key}]";
+			$id          = "maota_mm_i18n_{$lang}_{$key}";
+			$value       = $data->get_i18n_value( $lang, $key );
+			$base        = $data->get_field( $section, $key );
+			$placeholder = ( '' !== trim( (string) $base ) ) ? $base : ( isset( $field['placeholder'] ) ? $field['placeholder'] : '' );
+		} else {
+			$name        = self::OPTION_NAME . "[{$section}][{$key}]";
+			$id          = "maota_mm_{$section}_{$key}";
+			$value       = $data->get_field( $section, $key );
+			$placeholder = isset( $field['placeholder'] ) ? $field['placeholder'] : '';
+		}
 
 		switch ( $field['type'] ) {
 			case 'textarea':
@@ -355,6 +395,47 @@ class Maota_MM_Settings {
 		if ( ! empty( $field['description'] ) ) {
 			echo '<p class="description">' . esc_html( $field['description'] ) . '</p>';
 		}
+
+		if ( $translating ) {
+			echo '<p class="description"><em>' . sprintf(
+				/* translators: %s: language name */
+				esc_html__( 'Translation for %s — leave blank to use the default language.', 'maota-metamarkup' ),
+				esc_html( $this->language_label( $ctx['lang'] ) )
+			) . '</em></p>';
+		} elseif ( $ctx['secondary'] && ! Maota_MM_I18n::is_translatable( $key ) ) {
+			echo '<p class="description"><em>' . esc_html__( 'Shared across all languages.', 'maota-metamarkup' ) . '</em></p>';
+		}
+	}
+
+	/**
+	 * Explains which language is being edited when WPML is active, so users
+	 * understand that content fields are language-specific.
+	 */
+	private function render_language_notice() {
+		if ( ! Maota_MM_I18n::is_active() ) {
+			return;
+		}
+		$ctx = $this->editing_language();
+		if ( ! $ctx['lang'] ) {
+			return;
+		}
+		$label = '<strong>' . esc_html( $this->language_label( $ctx['lang'] ) ) . '</strong>';
+
+		echo '<div class="notice notice-info inline"><p>';
+		if ( $ctx['secondary'] ) {
+			printf(
+				/* translators: %s: language name */
+				wp_kses_post( __( 'Editing content for %s. Content fields are language-specific — switch language in the admin bar to translate them. Other settings are shared across all languages.', 'maota-metamarkup' ) ),
+				$label // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+			);
+		} else {
+			printf(
+				/* translators: %s: language name */
+				wp_kses_post( __( 'Editing content for %s (default language). Switch language in the admin bar to add translations for the content fields.', 'maota-metamarkup' ) ),
+				$label // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+			);
+		}
+		echo '</p></div>';
 	}
 
 	public function render_page() {
@@ -364,6 +445,7 @@ class Maota_MM_Settings {
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Maota Metamarkup', 'maota-metamarkup' ); ?></h1>
+			<?php $this->render_language_notice(); ?>
 			<form method="post" action="options.php">
 				<?php
 				settings_fields( self::GROUP );
@@ -380,18 +462,50 @@ class Maota_MM_Settings {
 	 * passed through the sanitizer appropriate to its declared type.
 	 */
 	public function sanitize( $input ) {
-		$clean    = array();
 		$input    = is_array( $input ) ? $input : array();
 		$defaults = self::get_defaults();
+		$schema   = self::get_field_schema();
 
-		foreach ( self::get_field_schema() as $section_key => $section ) {
-			$clean[ $section_key ] = array();
-			$raw_section           = isset( $input[ $section_key ] ) && is_array( $input[ $section_key ] ) ? $input[ $section_key ] : array();
+		// Start from the currently stored option so anything not present in
+		// this submission is preserved: other languages' translations, and the
+		// base content fields that are hidden while editing a secondary
+		// language (the form only posts one language's values at a time).
+		$existing = get_option( self::OPTION_NAME, array() );
+		$clean    = is_array( $existing ) ? $existing : array();
 
+		// Base (default-language) fields: overlay only those actually submitted.
+		foreach ( $schema as $section_key => $section ) {
+			if ( ! isset( $clean[ $section_key ] ) || ! is_array( $clean[ $section_key ] ) ) {
+				$clean[ $section_key ] = array();
+			}
 			foreach ( $section['fields'] as $field_key => $field ) {
-				$raw = isset( $raw_section[ $field_key ] ) ? $raw_section[ $field_key ] : '';
+				if ( isset( $input[ $section_key ][ $field_key ] ) ) {
+					$clean[ $section_key ][ $field_key ] = $this->sanitize_value( $input[ $section_key ][ $field_key ], $field, $defaults[ $section_key ][ $field_key ] );
+				} elseif ( ! isset( $clean[ $section_key ][ $field_key ] ) ) {
+					$clean[ $section_key ][ $field_key ] = $defaults[ $section_key ][ $field_key ];
+				}
+			}
+		}
 
-				$clean[ $section_key ][ $field_key ] = $this->sanitize_value( $raw, $field, $defaults[ $section_key ][ $field_key ] );
+		// Per-language translations: overlay submitted languages/fields only.
+		if ( isset( $input['i18n'] ) && is_array( $input['i18n'] ) ) {
+			if ( ! isset( $clean['i18n'] ) || ! is_array( $clean['i18n'] ) ) {
+				$clean['i18n'] = array();
+			}
+			foreach ( $input['i18n'] as $lang => $vals ) {
+				$lang = sanitize_key( $lang );
+				if ( '' === $lang || ! is_array( $vals ) ) {
+					continue;
+				}
+				if ( ! isset( $clean['i18n'][ $lang ] ) || ! is_array( $clean['i18n'][ $lang ] ) ) {
+					$clean['i18n'][ $lang ] = array();
+				}
+				foreach ( Maota_MM_I18n::translatable_fields() as $tf ) {
+					list( $tsection, $tkey ) = $tf;
+					if ( isset( $vals[ $tkey ] ) && isset( $schema[ $tsection ]['fields'][ $tkey ] ) ) {
+						$clean['i18n'][ $lang ][ $tkey ] = $this->sanitize_value( $vals[ $tkey ], $schema[ $tsection ]['fields'][ $tkey ], '' );
+					}
+				}
 			}
 		}
 

@@ -43,6 +43,10 @@ class Maota_MM_Data {
 				}
 			}
 		}
+		// Per-language translations live outside the fixed schema; carry them through.
+		if ( isset( $saved['i18n'] ) && is_array( $saved['i18n'] ) ) {
+			$merged['i18n'] = $saved['i18n'];
+		}
 		return $merged;
 	}
 
@@ -52,12 +56,35 @@ class Maota_MM_Data {
 	}
 
 	/**
-	 * Same as get_field() but resolved to the current language via WPML when
-	 * active. Used by all OUTPUT paths; the admin form still uses get_field()
-	 * so it edits the original/default-language value.
+	 * Same as get_field() but resolved to the current language. Used by all
+	 * OUTPUT paths. Non-default languages read the per-language value stored
+	 * under options['i18n'][ lang ][ key ], falling back to the default-
+	 * language (base) value when empty or when WPML is inactive.
 	 */
 	public function get_translated_field( $section, $key ) {
-		return Maota_MM_I18n::translate( $key, $this->get_field( $section, $key ) );
+		$base = $this->get_field( $section, $key );
+
+		if ( ! Maota_MM_I18n::is_translatable( $key ) ) {
+			return $base;
+		}
+
+		$lang    = Maota_MM_I18n::current_language();
+		$default = Maota_MM_I18n::default_language();
+
+		if ( $lang && $lang !== $default ) {
+			$translated = $this->get_i18n_value( $lang, $key );
+			if ( '' !== trim( (string) $translated ) ) {
+				return $translated;
+			}
+		}
+
+		return $base;
+	}
+
+	/** Raw per-language value for a translatable field ('' if none stored). */
+	public function get_i18n_value( $lang, $key ) {
+		$options = $this->get_options();
+		return isset( $options['i18n'][ $lang ][ $key ] ) ? $options['i18n'][ $lang ][ $key ] : '';
 	}
 
 	private function get_lines( $section, $key, $translate = false ) {
