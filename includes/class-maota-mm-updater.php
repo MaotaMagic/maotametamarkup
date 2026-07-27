@@ -39,10 +39,12 @@ class Maota_MM_Updater {
 	 * Fetch + cache the latest GitHub release. Returns an object with
 	 * ->version, ->package, ->changelog, ->html_url — or null on failure.
 	 */
-	private function get_latest_release() {
-		$cached = get_transient( self::CACHE_KEY );
-		if ( false !== $cached ) {
-			return $cached ? $cached : null;
+	private function get_latest_release( $force = false ) {
+		if ( ! $force ) {
+			$cached = get_transient( self::CACHE_KEY );
+			if ( false !== $cached ) {
+				return $cached ? $cached : null;
+			}
 		}
 
 		$url      = sprintf( 'https://api.github.com/repos/%s/%s/releases/latest', self::REPO_OWNER, self::REPO_NAME );
@@ -105,7 +107,11 @@ class Maota_MM_Updater {
 			return $transient;
 		}
 
-		$release = $this->get_latest_release();
+		// When the user clicks "Check again" (Dashboard → Updates), WordPress
+		// requests update-core.php?force-check=1. Bypass our 6h GitHub cache on
+		// that request so the newest release shows immediately.
+		$force   = ! empty( $_GET['force-check'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only; core's own manual-check flag.
+		$release = $this->get_latest_release( $force );
 		if ( ! $release ) {
 			return $transient;
 		}

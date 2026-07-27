@@ -22,6 +22,9 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.3.1 =
+* Clicking "Check again" on Dashboard → Updates now bypasses the plugin's 6-hour GitHub release cache, so the newest version appears immediately instead of after the cache expires.
+
 = 1.3.0 =
 * llms.txt pages can now be grouped under custom section headings. Each page has an optional "Section heading" field (with autocomplete for reuse); pages sharing a heading are listed together, ordered by page order. The summary now renders as multiple blockquote lines when it spans several lines. Section headings and page content localize per language like the rest of the output.
 
