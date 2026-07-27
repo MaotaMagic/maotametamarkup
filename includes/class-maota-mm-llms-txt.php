@@ -80,7 +80,14 @@ class Maota_MM_LLMs_Txt {
 			$summary = $data->get_tagline();
 		}
 		if ( $summary ) {
-			$lines[] = '> ' . $this->clean_text( $summary );
+			// Render each line of the summary as its own blockquote line so a
+			// multi-line "what this site provides" reads cleanly.
+			foreach ( preg_split( '/\r\n|\r|\n/', $this->clean_text( $summary ) ) as $sline ) {
+				$sline = trim( $sline );
+				if ( '' !== $sline ) {
+					$lines[] = '> ' . $sline;
+				}
+			}
 			$lines[] = '';
 		}
 
@@ -109,17 +116,43 @@ class Maota_MM_LLMs_Txt {
 			)
 		);
 		if ( $pages ) {
-			$lines[] = '## Key Pages';
-			$lines[] = '- [' . __( 'Home', 'maota-metamarkup' ) . '](' . $data->get_home_url() . ')';
+			$default_label = __( 'Pages', 'maota-metamarkup' );
+			$groups        = array(); // section label => array of markdown link lines.
+			$group_order   = array(); // section label => sort index (first appearance).
+			$index         = 0;
+
 			foreach ( $pages as $page ) {
+				$section = trim( Maota_MM_Page_Flags::get_section( $page->ID ) );
+				$label   = '' !== $section ? $section : $default_label;
+
 				$excerpt = get_the_excerpt( $page );
 				$line    = '- [' . $this->clean_text( get_the_title( $page ) ) . '](' . get_permalink( $page ) . ')';
 				if ( $excerpt ) {
 					$line .= ': ' . $this->clean_text( $excerpt );
 				}
-				$lines[] = $line;
+
+				if ( ! isset( $groups[ $label ] ) ) {
+					$groups[ $label ]      = array();
+					$group_order[ $label ] = $index;
+				}
+				$groups[ $label ][] = $line;
+				$index++;
 			}
-			$lines[] = '';
+
+			// Sections follow page order (menu_order); the unlabeled "Pages"
+			// bucket always sorts last.
+			if ( isset( $group_order[ $default_label ] ) ) {
+				$group_order[ $default_label ] = $index + 1;
+			}
+			asort( $group_order );
+
+			foreach ( array_keys( $group_order ) as $label ) {
+				$lines[] = '## ' . $this->clean_text( $label );
+				foreach ( $groups[ $label ] as $line ) {
+					$lines[] = $line;
+				}
+				$lines[] = '';
+			}
 		}
 
 		$additional = $data->get_translated_field( 'context', 'context_additional_ai' );

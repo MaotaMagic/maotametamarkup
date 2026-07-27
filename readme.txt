@@ -22,6 +22,9 @@ Your existing Site Title, Tagline, Site Icon, and Site Logo (Settings > General 
 
 == Changelog ==
 
+= 1.3.0 =
+* llms.txt pages can now be grouped under custom section headings. Each page has an optional "Section heading" field (with autocomplete for reuse); pages sharing a heading are listed together, ordered by page order. The summary now renders as multiple blockquote lines when it spans several lines. Section headings and page content localize per language like the rest of the output.
+
 = 1.2.2 =
 * llms.txt is now language-aware: request /llms.txt?lang=xx to get a specific language (works in any WPML URL mode), and the Languages section links to those working URLs. The "what this site provides" summary now appears in the blockquote (previously the organization description was shown twice).
 

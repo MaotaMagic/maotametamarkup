@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Maota_MM_Page_Flags {
 
 	const META_KEY  = '_maota_mm_include_in_llms';
+	const SECTION_META_KEY = '_maota_mm_llms_section';
 	const AJAX_ACTION = 'maota_mm_toggle_llms_include';
 	const NONCE_ACTION = 'maota_mm_toggle_llms';
 
@@ -34,6 +35,23 @@ class Maota_MM_Page_Flags {
 		return '1' === get_post_meta( $post_id, self::META_KEY, true );
 	}
 
+	/** The llms.txt grouping heading for a page ('' = default list). */
+	public static function get_section( $post_id ) {
+		return (string) get_post_meta( $post_id, self::SECTION_META_KEY, true );
+	}
+
+	/** Distinct section names already in use, for the meta-box autocomplete. */
+	public static function existing_sections() {
+		global $wpdb;
+		$values = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value <> '' ORDER BY meta_value ASC",
+				self::SECTION_META_KEY
+			)
+		);
+		return is_array( $values ) ? $values : array();
+	}
+
 	public function add_excerpt_support() {
 		add_post_type_support( 'page', 'excerpt' );
 	}
@@ -54,12 +72,24 @@ class Maota_MM_Page_Flags {
 	public function render_meta_box( $post ) {
 		wp_nonce_field( 'maota_mm_save_llms_include', 'maota_mm_llms_include_nonce' );
 		$checked = self::is_included( $post->ID );
+		$section = self::get_section( $post->ID );
 		?>
 		<label>
 			<input type="checkbox" name="maota_mm_include_in_llms" value="1" <?php checked( $checked ); ?> />
 			<?php esc_html_e( 'Include in llms.txt', 'maota-metamarkup' ); ?>
 		</label>
-		<p class="description"><?php esc_html_e( 'Lists this page under "Key Pages" in the virtual llms.txt file read by AI agents.', 'maota-metamarkup' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Lists this page in the virtual llms.txt file read by AI agents.', 'maota-metamarkup' ); ?></p>
+
+		<p style="margin-top:12px;">
+			<label for="maota_mm_llms_section"><strong><?php esc_html_e( 'Section heading', 'maota-metamarkup' ); ?></strong></label><br />
+			<input type="text" id="maota_mm_llms_section" name="maota_mm_llms_section" value="<?php echo esc_attr( $section ); ?>" class="widefat" list="maota_mm_llms_sections" placeholder="<?php esc_attr_e( 'e.g. Accommodation', 'maota-metamarkup' ); ?>" />
+			<datalist id="maota_mm_llms_sections">
+				<?php foreach ( self::existing_sections() as $existing ) : ?>
+					<option value="<?php echo esc_attr( $existing ); ?>"></option>
+				<?php endforeach; ?>
+			</datalist>
+		</p>
+		<p class="description"><?php esc_html_e( 'Groups this page under a heading in llms.txt (pages sharing a heading are listed together). Leave blank to fall under a default list.', 'maota-metamarkup' ); ?></p>
 		<?php
 	}
 
@@ -75,6 +105,9 @@ class Maota_MM_Page_Flags {
 		}
 
 		update_post_meta( $post_id, self::META_KEY, isset( $_POST['maota_mm_include_in_llms'] ) ? '1' : '0' );
+
+		$section = isset( $_POST['maota_mm_llms_section'] ) ? sanitize_text_field( wp_unslash( $_POST['maota_mm_llms_section'] ) ) : '';
+		update_post_meta( $post_id, self::SECTION_META_KEY, $section );
 	}
 
 	/* --- Pages list table column --- */
